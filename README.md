@@ -41,14 +41,14 @@ python -m e2eps link-budget scenarios/leo_ku_europe.yaml --elevation 25
 dist\e2eps\e2eps.exe run dist\e2eps\scenarios\leo_ku_europe.yaml --out output
 ```
 
-Linux/macOS: `./build_exe.sh`. The submission ZIP (source + Git history + executable) is built with `.\make_submission.ps1`.
+Linux/macOS: `./build_exe.sh`.
 
 > **Windows: "script is not digitally signed" error**
 > PowerShell blocks scripts that came from a downloaded ZIP. Run one of these first:
 >
 > ```powershell
 > # Option 1 - unblock the scripts (permanent)
-> Unblock-File .\build_exe.ps1, .\make_submission.ps1
+> Unblock-File .\build_exe.ps1
 >
 > # Option 2 - allow scripts for the current terminal only
 > Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
@@ -60,6 +60,16 @@ Linux/macOS: `./build_exe.sh`. The submission ZIP (source + Git history + execut
 > pyinstaller --noconfirm --clean --name e2eps --onedir --collect-submodules e2eps --exclude-module tkinter run_e2eps.py
 > Copy-Item -Recurse -Force scenarios dist\e2eps\scenarios
 > ```
+
+### Packaging the submission
+
+The ZIP must contain the source, the Git history (`.git`) and the executable.
+
+1. Commit everything and run `pytest -q`
+2. Build the executable (see above)
+3. Copy the repo folder and delete `.venv`, `build`, `output`, `.pytest_cache`
+4. Zip the copy with 7-Zip or Explorer (both keep hidden folders; PowerShell `Compress-Archive` may skip `.git`)
+5. Open the ZIP and confirm `.git` and `dist\e2eps\e2eps.exe` are inside
 
 ## Outputs
 
@@ -120,4 +130,10 @@ e2eps/
 scenarios/     reference and test scenarios
 tests/         unit and end-to-end tests
 benchmarks/    geometry benchmark + results
+```
+
+## Regenerating diagrams
+
+```bash
+python docs/diagrams/render_diagrams.py
 ```
