@@ -9,6 +9,21 @@ downstream model needs:
     visible     (T, S, G) bool   which links can physically exist
 
 T = time steps in the chunk, S = satellites, G = ground points.
+
+Performance
+-----------
+The naive approach builds the ground-to-satellite vector d = sat - ground for
+every link, i.e. a (T, S, G, 3) array. Here every quantity is rewritten in
+terms of dot products, so it reduces to two matrix multiplications that NumPy
+hands to BLAS:
+
+    |d|^2       = |sat|^2 - 2 sat.g + |g|^2
+    d.up        = sat.up - g.up
+    sat.d       = |sat|^2 - sat.g
+
+No 4-D intermediate is created and work arrays are updated in place, so
+memory and runtime both drop several-fold (see benchmarks/results.md). Maths is done in float64; outputs can be stored
+as float32 to halve memory again.
 """
 
 from __future__ import annotations
@@ -45,30 +60,59 @@ class GeometryEngine:
         Terminals or gateways, prepared once per run.
     max_off_nadir_deg : float, optional
         Satellite antenna steering limit. Links beyond it are not visible.
+    dtype : numpy dtype
+        Storage type of the output angle and range arrays (float64 or float32).
     """
 
-    def __init__(self, ground: GroundPoints, max_off_nadir_deg: float | None = None):
+    def __init__(self, ground: GroundPoints, max_off_nadir_deg: float | None = None,
+                 dtype=np.float64):
         self.ground = ground
         self.max_off_nadir_deg = max_off_nadir_deg
+        self.dtype = np.dtype(dtype)
+
+        # Ground-only terms, computed once
+        self._g_t = np.ascontiguousarray(ground.ecef.T)               # (3, G)
+        self._up_t = np.ascontiguousarray(ground.up.T)                # (3, G)
+        self._g_sq = np.einsum("gk,gk->g", ground.ecef, ground.ecef)  # (G,)
+        self._g_up = np.einsum("gk,gk->g", ground.ecef, ground.up)    # (G,)
+        self._sin_min_el = np.sin(np.radians(ground.min_elevation_deg))
 
     def compute(self, sat_ecef: np.ndarray) -> GeometryResult:
         """sat_ecef: (T, S, 3) [m] -> GeometryResult with (T, S, G) arrays."""
-        g = self.ground
+        T, S, _ = sat_ecef.shape
+        sat = np.ascontiguousarray(sat_ecef, dtype=np.float64).reshape(T * S, 3)
+        s_sq = np.einsum("nk,nk->n", sat, sat)[:, None]                # (TS, 1)
 
-        # Ground-to-satellite vectors, broadcast to (T, S, G, 3)
-        d = sat_ecef[:, :, None, :] - g.ecef[None, None, :, :]
-        rng = np.linalg.norm(d, axis=-1)
+        # Three (TS, G) float64 work arrays, updated in place to cap peak memory.
+        a = sat @ self._g_t                                            # sat.g   (BLAS)
+        c = sat @ self._up_t                                           # sat.up  (BLAS)
 
-        sin_el = np.einsum("tsgk,gk->tsg", d, g.up) / rng
-        elevation = np.degrees(np.arcsin(np.clip(sin_el, -1.0, 1.0)))
+        rng = np.multiply(a, -2.0)                                     # |d|^2 -> |d|
+        rng += s_sq
+        rng += self._g_sq
+        np.maximum(rng, 0.0, out=rng)
+        np.sqrt(rng, out=rng)
 
-        # Off-nadir: angle at the satellite between nadir and the ground point
-        r_sat = np.linalg.norm(sat_ecef, axis=-1)[:, :, None]
-        cos_nadir = np.einsum("tsk,tsgk->tsg", sat_ecef, d) / (r_sat * rng)
-        off_nadir = np.degrees(np.arccos(np.clip(cos_nadir, -1.0, 1.0)))
+        c -= self._g_up                                                # d.up -> sin(el)
+        c /= rng
+        np.clip(c, -1.0, 1.0, out=c)
+        visible = c >= self._sin_min_el
 
-        visible = elevation >= g.min_elevation_deg[None, None, :]
+        np.negative(a, out=a)                                          # sat.d -> cos(nadir)
+        a += s_sq
+        a /= np.sqrt(s_sq)
+        a /= rng
+        np.clip(a, -1.0, 1.0, out=a)
+
+        np.degrees(np.arccos(a, out=a), out=a)                         # off-nadir [deg]
+        np.degrees(np.arcsin(c, out=c), out=c)                         # elevation [deg]
         if self.max_off_nadir_deg is not None:
-            visible &= off_nadir <= self.max_off_nadir_deg
+            visible &= a <= self.max_off_nadir_deg
 
-        return GeometryResult(elevation, rng, off_nadir, visible)
+        shape = (T, S, self.ground.size)
+        return GeometryResult(
+            elevation_deg=c.astype(self.dtype, copy=False).reshape(shape),
+            slant_range_m=rng.astype(self.dtype, copy=False).reshape(shape),
+            off_nadir_deg=a.astype(self.dtype, copy=False).reshape(shape),
+            visible=visible.reshape(shape),
+        )

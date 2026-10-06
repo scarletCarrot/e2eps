@@ -76,3 +76,39 @@ def test_constellation_shapes_and_coverage():
     # A 528-sat shell at 53 deg keeps mid-latitude Europe covered
     assert counts.min() >= 1
     assert (res.slant_range_m[res.visible] < 1.3e6).all()
+
+
+# ---------------------------------------------------------------- optimisation
+from e2eps.geometry.reference import geometry_broadcast, geometry_loop  # noqa: E402
+
+
+def _random_case(seed=0, T=3, S=12, G=7):
+    rng = np.random.default_rng(seed)
+    epoch = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    prop = WalkerDeltaPropagator(
+        WalkerDeltaConfig(altitude_km=550, inclination_deg=53, num_planes=3, sats_per_plane=4),
+        epoch)
+    sat = prop.positions_ecef(rng.uniform(0, 6000, T))
+    sites = [Site(id=f"p{i}", lat_deg=float(rng.uniform(-60, 60)),
+                  lon_deg=float(rng.uniform(-180, 180)), alt_m=float(rng.uniform(0, 2000)))
+             for i in range(G)]
+    return sat, GroundPoints.from_sites(sites, 25.0)
+
+
+def test_engine_matches_reference_implementations():
+    sat, ground = _random_case()
+    res = GeometryEngine(ground).compute(sat)
+    for el, rng_, nad in (geometry_loop(sat, ground), geometry_broadcast(sat, ground)):
+        assert np.allclose(res.elevation_deg, el, atol=1e-6)
+        assert np.allclose(res.slant_range_m, rng_, atol=1e-3)     # millimetres
+        assert np.allclose(res.off_nadir_deg, nad, atol=1e-6)
+
+
+def test_float32_output_close_to_float64():
+    sat, ground = _random_case(seed=1)
+    r64 = GeometryEngine(ground).compute(sat)
+    r32 = GeometryEngine(ground, dtype=np.float32).compute(sat)
+    assert r32.slant_range_m.dtype == np.float32
+    assert np.allclose(r32.slant_range_m, r64.slant_range_m, rtol=1e-6)
+    assert np.allclose(r32.elevation_deg, r64.elevation_deg, atol=1e-4)
+    assert np.array_equal(r32.visible, r64.visible)
