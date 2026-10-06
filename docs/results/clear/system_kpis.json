@@ -1,0 +1,25 @@
+{
+  "scenario": "leo-ku-europe",
+  "time_steps": 721,
+  "satellites": 528,
+  "terminals": 239,
+  "availability_pct": 100.0,
+  "terminals_below_99pct_availability": 0,
+  "throughput_mean_mbps": 70.732,
+  "throughput_p5_mbps": 27.759,
+  "throughput_p50_mbps": 60.723,
+  "throughput_p95_mbps": 138.795,
+  "latency_mean_ms": 19.864,
+  "latency_p95_ms": 21.166,
+  "total_delivered_gbps_mean": 16.905,
+  "active_satellites_mean": 17.581,
+  "users_per_active_satellite_mean": 13.594,
+  "runtime_s": {
+    "orbit": 0.03,
+    "geometry": 2.59,
+    "link_budget": 0.39,
+    "allocation": 0.3,
+    "latency": 0.01,
+    "total": 3.31
+  }
+}
