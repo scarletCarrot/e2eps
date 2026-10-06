@@ -54,6 +54,7 @@ rf:
   downlink:                # A9-A13
     frequency_ghz: 11.7
     bandwidth_mhz: 240
+    rolloff: 0.1
     sat_eirp_dbw: 36.0
     scan_loss_exponent: 1.2
     max_scan_deg: 60

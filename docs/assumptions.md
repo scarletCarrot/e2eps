@@ -28,7 +28,7 @@ The brief leaves most system parameters open. These assumptions let the work mov
 | A10 | Losses: free-space path loss + gaseous (fixed) + rain (simplified ITU-R P.838 / P.618 approach) + pointing/scan loss | Captures the effects that move the needle on throughput; scintillation and cloud ignored in v1 |
 | A11 | Satellite phased array with scan loss growing with off-boresight angle | Phased arrays lose gain when steering away from nadir; this is the main reason low-elevation users get less throughput |
 | A12 | C/N only - **no interference** (C/(N+I)) in v1 | Interference needs frequency plan and beam layout we don't have. Flagged as a top question |
-| A13 | Adaptive coding and modulation using a DVB-S2X MODCOD table, plus implementation margin | Industry standard for broadband satellite; maps Es/N0 to spectral efficiency |
+| A13 | Adaptive coding and modulation using the DVB-S2 MODCOD set (QPSK to 32APSK, a subset of DVB-S2X), plus implementation margin | Industry standard for broadband satellite; maps Es/N0 to spectral efficiency. Higher-order DVB-S2X MODCODs can be added to the table |
 
 ## 4. Capacity, availability and latency
 

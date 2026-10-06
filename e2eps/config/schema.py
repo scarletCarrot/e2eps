@@ -120,6 +120,7 @@ class DownlinkConfig(_Model):
 
     frequency_ghz: float = Field(gt=0, le=100)
     bandwidth_mhz: float = Field(gt=0, description="User-link channel bandwidth per satellite")
+    rolloff: float = Field(default=0.1, ge=0, le=0.5, description="Pulse-shaping roll-off")
     sat_eirp_dbw: float = Field(description="Satellite EIRP at boresight (nadir) [dBW]")
     scan_loss_exponent: float = Field(default=1.2, ge=0,
                                       description="Array scan loss ~ cos(theta)^n (A11)")
