@@ -1,0 +1,68 @@
+# Reference scenario: single LEO Walker-Delta shell, Ku-band user downlink,
+# terminals over Europe. Values are representative, not a specific operator.
+# See docs/assumptions.md for the reasoning behind each choice.
+
+name: leo-ku-europe
+description: >
+  Reference LEO broadband shell (550 km, 53 deg, 24x22) serving a 2-degree
+  terminal grid over Europe plus named cities, clear sky.
+
+epoch: "2026-01-01T00:00:00Z"
+
+simulation:
+  duration_s: 21600        # 6 hours
+  step_s: 30               # A18
+  chunk_steps: 40          # A19 - bounds memory per chunk
+
+constellation:
+  type: walker_delta
+  altitude_km: 550         # A1
+  inclination_deg: 53
+  num_planes: 24
+  sats_per_plane: 22       # 528 satellites
+  phasing: 1
+  include_j2: true         # A2
+
+user_terminals:
+  min_elevation_deg: 25    # A7
+  g_over_t_dbk: 12.0
+  sites:
+    - { id: madrid,    lat_deg: 40.42, lon_deg:  -3.70, alt_m: 650 }
+    - { id: london,    lat_deg: 51.51, lon_deg:  -0.13, alt_m: 20 }
+    - { id: berlin,    lat_deg: 52.52, lon_deg:  13.40, alt_m: 35 }
+    - { id: rome,      lat_deg: 41.90, lon_deg:  12.50, alt_m: 20 }
+    - { id: stockholm, lat_deg: 59.33, lon_deg:  18.07, alt_m: 30 }
+  grid:
+    lat_min_deg: 36
+    lat_max_deg: 60
+    lon_min_deg: -10
+    lon_max_deg: 24
+    step_deg: 2
+
+gateways:
+  min_elevation_deg: 10    # A7
+  sites:
+    - { id: gw_lisbon,   lat_deg: 38.72, lon_deg:  -9.14 }
+    - { id: gw_madrid,   lat_deg: 40.45, lon_deg:  -3.55 }
+    - { id: gw_goonhilly, lat_deg: 50.05, lon_deg: -5.18 }
+    - { id: gw_frankfurt, lat_deg: 50.11, lon_deg:  8.68 }
+    - { id: gw_fucino,   lat_deg: 41.98, lon_deg:  13.60 }
+    - { id: gw_kiruna,   lat_deg: 67.86, lon_deg:  20.96 }
+    - { id: gw_warsaw,   lat_deg: 52.23, lon_deg:  21.01 }
+
+rf:
+  downlink:                # A9-A13
+    frequency_ghz: 11.7
+    bandwidth_mhz: 240
+    sat_eirp_dbw: 36.0
+    scan_loss_exponent: 1.2
+    max_scan_deg: 60
+    gaseous_loss_zenith_db: 0.3
+    rain_rate_mm_h: 0.0    # clear sky; set e.g. 25 for a rain case
+    rain_height_km: 4.0
+    misc_losses_db: 1.0
+    implementation_margin_db: 1.0
+
+latency:                   # A17
+  processing_ms: 5
+  terrestrial_ms: 10

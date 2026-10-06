@@ -1,0 +1,19 @@
+# Tiny scenario for quick runs and tests.
+name: small-test
+epoch: "2026-01-01T00:00:00Z"
+simulation: { duration_s: 3600, step_s: 60, chunk_steps: 20 }
+constellation:
+  { type: walker_delta, altitude_km: 550, inclination_deg: 53,
+    num_planes: 6, sats_per_plane: 10, phasing: 1, include_j2: true }
+user_terminals:
+  min_elevation_deg: 25
+  g_over_t_dbk: 12.0
+  sites:
+    - { id: madrid, lat_deg: 40.42, lon_deg: -3.70 }
+    - { id: london, lat_deg: 51.51, lon_deg: -0.13 }
+gateways:
+  min_elevation_deg: 10
+  sites:
+    - { id: gw_madrid, lat_deg: 40.45, lon_deg: -3.55 }
+rf:
+  downlink: { frequency_ghz: 11.7, bandwidth_mhz: 240, sat_eirp_dbw: 36.0 }
